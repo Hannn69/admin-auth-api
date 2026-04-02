@@ -1,0 +1,245 @@
+"use strict";
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.TasksService = void 0;
+const common_1 = require("@nestjs/common");
+const client_1 = require("@prisma/client");
+const prisma_service_1 = require("../prisma/prisma.service");
+const toDateOrNull = (value) => {
+    if (!value) {
+        return null;
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return null;
+    }
+    const dateOnly = /^\d{4}-\d{2}-\d{2}$/;
+    if (dateOnly.test(trimmed)) {
+        const [year, month, day] = trimmed.split('-').map(Number);
+        if (!year || !month || !day) {
+            return null;
+        }
+        const utc = Date.UTC(year, month - 1, day);
+        return new Date(utc);
+    }
+    const parsed = Date.parse(trimmed);
+    if (!Number.isFinite(parsed)) {
+        return null;
+    }
+    const date = new Date(parsed);
+    if (!Number.isFinite(date.getTime())) {
+        return null;
+    }
+    if (date.getUTCFullYear() < 1970 || date.getUTCFullYear() > 2100) {
+        return null;
+    }
+    return date;
+};
+const normalizeSubtasks = (value) => {
+    if (value === undefined) {
+        return undefined;
+    }
+    if (value === null) {
+        return null;
+    }
+    if (!Array.isArray(value)) {
+        return undefined;
+    }
+    const normalized = [];
+    value.forEach((item, index) => {
+        if (!item || typeof item !== 'object') {
+            return;
+        }
+        const record = item;
+        const title = typeof record.title === 'string' ? record.title.trim() : '';
+        if (!title) {
+            return;
+        }
+        let id = index + 1;
+        if (typeof record.id === 'number' && Number.isFinite(record.id)) {
+            id = record.id;
+        }
+        else if (typeof record.id === 'string') {
+            const parsed = Number(record.id);
+            if (Number.isFinite(parsed)) {
+                id = parsed;
+            }
+        }
+        const priority = record.priority === 'High' ||
+            record.priority === 'Low' ||
+            record.priority === 'Medium'
+            ? record.priority
+            : 'Medium';
+        const status = record.status === 'In progress' ||
+            record.status === 'Done' ||
+            record.status === 'To do'
+            ? record.status
+            : 'To do';
+        const assignee = typeof record.assignee === 'string' && record.assignee.trim()
+            ? record.assignee.trim()
+            : 'Unassigned';
+        normalized.push({
+            id,
+            title,
+            priority,
+            assignee,
+            status,
+        });
+    });
+    return normalized;
+};
+let TasksService = class TasksService {
+    prisma;
+    constructor(prisma) {
+        this.prisma = prisma;
+    }
+    async create(input) {
+        if (!input.summary?.trim()) {
+            throw new common_1.BadRequestException('Summary is required.');
+        }
+        const stamp = Date.now().toString(36);
+        const rand = Math.random().toString(36).slice(2, 6);
+        const key = `TASK-${stamp}-${rand}`.toUpperCase();
+        const slug = key;
+        const subtasks = normalizeSubtasks(input.subtasks);
+        const task = await this.prisma.task.create({
+            data: {
+                key,
+                slug,
+                space: input.space?.trim() || null,
+                workType: input.workType?.trim() || null,
+                status: input.status?.trim() || 'To do',
+                summary: input.summary.trim(),
+                description: input.description?.trim() || null,
+                assignee: input.assignee?.trim() || null,
+                reporter: input.reporter?.trim() || null,
+                priority: input.priority?.trim() || null,
+                labels: input.labels?.trim() || null,
+                dueDate: toDateOrNull(input.dueDate),
+                startDate: toDateOrNull(input.startDate),
+                category: input.category?.trim() || null,
+                team: input.team?.trim() || null,
+                subtasks: subtasks === undefined
+                    ? undefined
+                    : subtasks === null
+                        ? client_1.Prisma.DbNull
+                        : subtasks,
+                userId: input.userId,
+                createdBy: input.createdBy,
+                updatedBy: input.updatedBy,
+            },
+        });
+        return task;
+    }
+    async updateByKey(key, input) {
+        if (!key) {
+            throw new common_1.BadRequestException('Key is required.');
+        }
+        if (input.summary !== undefined && !input.summary.trim()) {
+            throw new common_1.BadRequestException('Summary is required.');
+        }
+        const data = {};
+        const setOptionalString = (key, value) => {
+            if (value === undefined) {
+                return;
+            }
+            const trimmed = value.trim();
+            data[key] = trimmed ? trimmed : null;
+        };
+        if (input.summary !== undefined) {
+            data.summary = input.summary.trim();
+        }
+        if (input.status !== undefined) {
+            const trimmed = input.status.trim();
+            data.status = trimmed || 'To do';
+        }
+        setOptionalString('space', input.space);
+        setOptionalString('workType', input.workType);
+        setOptionalString('description', input.description);
+        setOptionalString('assignee', input.assignee);
+        setOptionalString('reporter', input.reporter);
+        setOptionalString('priority', input.priority);
+        setOptionalString('labels', input.labels);
+        setOptionalString('category', input.category);
+        setOptionalString('team', input.team);
+        if (input.dueDate !== undefined) {
+            data.dueDate = toDateOrNull(input.dueDate);
+        }
+        if (input.startDate !== undefined) {
+            data.startDate = toDateOrNull(input.startDate);
+        }
+        if (input.updatedBy !== undefined) {
+            data.updatedBy = input.updatedBy;
+        }
+        const subtasks = normalizeSubtasks(input.subtasks);
+        if (subtasks !== undefined) {
+            data.subtasks = subtasks === null ? client_1.Prisma.DbNull : subtasks;
+        }
+        return this.prisma.task.update({
+            where: { key },
+            data,
+        });
+    }
+    async deleteByKey(key) {
+        if (!key) {
+            throw new common_1.BadRequestException('Key is required.');
+        }
+        await this.prisma.task.delete({ where: { key } });
+    }
+    async findAll() {
+        return this.prisma.task.findMany({ orderBy: { createdAt: 'desc' } });
+    }
+    async findPaged(params) {
+        const search = params.search?.trim();
+        const where = {};
+        if (search) {
+            where.OR = [
+                { key: { contains: search } },
+                { summary: { contains: search } },
+                { assignee: { contains: search } },
+                { reporter: { contains: search } },
+                { labels: { contains: search } },
+            ];
+        }
+        if (params.status) {
+            where.status = params.status;
+        }
+        const skip = (params.page - 1) * params.limit;
+        const [tasks, total] = await Promise.all([
+            this.prisma.task.findMany({
+                orderBy: { [params.sort]: params.order },
+                where: Object.keys(where).length ? where : undefined,
+                skip,
+                take: params.limit,
+            }),
+            this.prisma.task.count({
+                where: Object.keys(where).length ? where : undefined,
+            }),
+        ]);
+        return { tasks, total };
+    }
+    async findByKeyOrSlug(value) {
+        if (!value) {
+            return null;
+        }
+        const byKey = await this.prisma.task.findUnique({ where: { key: value } });
+        if (byKey) {
+            return byKey;
+        }
+        return this.prisma.task.findUnique({ where: { slug: value } });
+    }
+};
+exports.TasksService = TasksService;
+exports.TasksService = TasksService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+], TasksService);
+//# sourceMappingURL=tasks.service.js.map
