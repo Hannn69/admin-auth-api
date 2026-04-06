@@ -22,9 +22,12 @@ model User {
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
-  tasks         Task[] @relation("TaskOwner")
-  createdTasks  Task[] @relation("TaskCreator")
-  updatedTasks  Task[] @relation("TaskUpdater")
+  tasks         Task[]  @relation("TaskOwner")
+  createdTasks  Task[]  @relation("TaskCreator")
+  updatedTasks  Task[]  @relation("TaskUpdater")
+  spaces        Space[] @relation("SpaceOwner")
+  createdSpaces Space[] @relation("SpaceCreator")
+  updatedSpaces Space[] @relation("SpaceUpdater")
 }
 
 model Task {
@@ -54,4 +57,28 @@ model Task {
   user     User @relation("TaskOwner", fields: [userId], references: [id])
   creator  User @relation("TaskCreator", fields: [createdBy], references: [id])
   updater  User @relation("TaskUpdater", fields: [updatedBy], references: [id])
+}
+
+model Space {
+  id              Int      @id @default(autoincrement())
+  slug            String   @unique
+  name            String
+  key             String   @unique
+  type            String?
+  app             String?
+  managed         String?
+  access          String?
+  lead            String?
+  category        String?
+  owner           String?
+  defaultAssignee String?
+  userId          Int
+  createdBy       Int
+  updatedBy       Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user    User @relation("SpaceOwner", fields: [userId], references: [id])
+  creator User @relation("SpaceCreator", fields: [createdBy], references: [id])
+  updater User @relation("SpaceUpdater", fields: [updatedBy], references: [id])
 }

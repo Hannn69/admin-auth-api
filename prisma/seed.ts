@@ -81,6 +81,77 @@ async function main() {
     data: tasks,
     skipDuplicates: true,
   });
+
+  const spaces = [
+    {
+      name: "My Team",
+      key: "KAN",
+      slug: "my-team",
+      type: "Team-managed software",
+      app: "Software",
+      managed: "Team-managed",
+      access: "Open",
+      lead: owner.email,
+      category: "Engineering",
+      owner: owner.email,
+      defaultAssignee: "Unassigned",
+    },
+    {
+      name: "task",
+      key: "TASK",
+      slug: "task",
+      type: "Team-managed business",
+      app: "Business",
+      managed: "Team-managed",
+      access: "Open",
+      lead: owner.email,
+      category: "Operations",
+      owner: owner.email,
+      defaultAssignee: "Unassigned",
+    },
+    {
+      name: "Security Ops",
+      key: "SEC",
+      slug: "security-ops",
+      type: "Company-managed software",
+      app: "Software",
+      managed: "Company-managed",
+      access: "Restricted",
+      lead: owner.email,
+      category: "Security",
+      owner: owner.email,
+      defaultAssignee: "Unassigned",
+    },
+  ];
+
+  const extraSpaces = Array.from({ length: 50 }, (_, index) => {
+    const number = String(index + 1).padStart(2, "0");
+    const name = `Space ${number}`;
+    const key = `SP${number}`;
+    return {
+      name,
+      key,
+      slug: `space-${number}`,
+      type: index % 2 === 0 ? "Team-managed software" : "Team-managed business",
+      app: index % 2 === 0 ? "Software" : "Business",
+      managed: "Team-managed",
+      access: index % 3 === 0 ? "Restricted" : "Open",
+      lead: owner.email,
+      category: index % 2 === 0 ? "Engineering" : "Operations",
+      owner: owner.email,
+      defaultAssignee: "Unassigned",
+    };
+  });
+
+  await prisma.space.createMany({
+    data: [...spaces, ...extraSpaces].map((space) => ({
+      ...space,
+      userId: owner.id,
+      createdBy: owner.id,
+      updatedBy: owner.id,
+    })),
+    skipDuplicates: true,
+  });
 }
 
 main()

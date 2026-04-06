@@ -44,8 +44,8 @@ export declare class TasksService {
         slug: string;
         createdAt: Date;
         updatedAt: Date;
-        key: string;
         space: string | null;
+        key: string;
         workType: string | null;
         status: string;
         summary: string;
@@ -68,8 +68,8 @@ export declare class TasksService {
         slug: string;
         createdAt: Date;
         updatedAt: Date;
-        key: string;
         space: string | null;
+        key: string;
         workType: string | null;
         status: string;
         summary: string;
@@ -93,8 +93,8 @@ export declare class TasksService {
         slug: string;
         createdAt: Date;
         updatedAt: Date;
-        key: string;
         space: string | null;
+        key: string;
         workType: string | null;
         status: string;
         summary: string;
@@ -125,8 +125,8 @@ export declare class TasksService {
             slug: string;
             createdAt: Date;
             updatedAt: Date;
-            key: string;
             space: string | null;
+            key: string;
             workType: string | null;
             status: string;
             summary: string;
@@ -151,8 +151,8 @@ export declare class TasksService {
         slug: string;
         createdAt: Date;
         updatedAt: Date;
-        key: string;
         space: string | null;
+        key: string;
         workType: string | null;
         status: string;
         summary: string;

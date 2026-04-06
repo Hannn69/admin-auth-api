@@ -18,8 +18,8 @@ export declare class TasksController {
             slug: string;
             createdAt: Date;
             updatedAt: Date;
-            key: string;
             space: string | null;
+            key: string;
             workType: string | null;
             status: string;
             summary: string;
@@ -47,8 +47,8 @@ export declare class TasksController {
             slug: string;
             createdAt: Date;
             updatedAt: Date;
-            key: string;
             space: string | null;
+            key: string;
             workType: string | null;
             status: string;
             summary: string;
