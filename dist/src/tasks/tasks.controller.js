@@ -76,7 +76,7 @@ let TasksController = class TasksController {
         await this.tasksService.deleteByKey(key);
         return { message: 'task has been deleted succesfully' };
     }
-    async list(pageParam, limitParam, sortParam, orderParam, searchParam, statusParam) {
+    async list(pageParam, limitParam, sortParam, orderParam, searchParam, statusParam, spaceParam) {
         const page = Math.max(1, Number(pageParam) || 1);
         const limit = Math.min(50, Math.max(5, Number(limitParam) || 5));
         const sort = sortParam === 'priority' || sortParam === 'status'
@@ -92,6 +92,7 @@ let TasksController = class TasksController {
             order,
             search: searchParam,
             status: statusParam && statusParam !== 'All' ? statusParam : undefined,
+            space: spaceParam?.trim() || undefined,
         });
         return { tasks, total, page, limit };
     }
@@ -140,8 +141,9 @@ __decorate([
     __param(3, (0, common_1.Query)('order')),
     __param(4, (0, common_1.Query)('search')),
     __param(5, (0, common_1.Query)('status')),
+    __param(6, (0, common_1.Query)('space')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String, String, String, String]),
+    __metadata("design:paramtypes", [String, String, String, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], TasksController.prototype, "list", null);
 __decorate([

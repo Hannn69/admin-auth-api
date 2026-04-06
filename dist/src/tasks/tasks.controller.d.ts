@@ -12,14 +12,11 @@ export declare class TasksController {
     remove(key: string): Promise<{
         message: string;
     }>;
-    list(pageParam?: string, limitParam?: string, sortParam?: string, orderParam?: string, searchParam?: string, statusParam?: string): Promise<{
+    list(pageParam?: string, limitParam?: string, sortParam?: string, orderParam?: string, searchParam?: string, statusParam?: string, spaceParam?: string): Promise<{
         tasks: {
-            id: number;
-            slug: string;
-            createdAt: Date;
-            updatedAt: Date;
-            space: string | null;
             key: string;
+            slug: string;
+            space: string | null;
             workType: string | null;
             status: string;
             summary: string;
@@ -33,6 +30,9 @@ export declare class TasksController {
             category: string | null;
             team: string | null;
             subtasks: import("@prisma/client/runtime/library").JsonValue | null;
+            createdAt: Date;
+            updatedAt: Date;
+            id: number;
             userId: number;
             createdBy: number;
             updatedBy: number;
@@ -43,12 +43,9 @@ export declare class TasksController {
     }>;
     detail(slug: string): Promise<{
         task: {
-            id: number;
-            slug: string;
-            createdAt: Date;
-            updatedAt: Date;
-            space: string | null;
             key: string;
+            slug: string;
+            space: string | null;
             workType: string | null;
             status: string;
             summary: string;
@@ -62,6 +59,9 @@ export declare class TasksController {
             category: string | null;
             team: string | null;
             subtasks: import("@prisma/client/runtime/library").JsonValue | null;
+            createdAt: Date;
+            updatedAt: Date;
+            id: number;
             userId: number;
             createdBy: number;
             updatedBy: number;

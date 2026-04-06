@@ -103,6 +103,7 @@ export class TasksController {
     @Query('order') orderParam?: string,
     @Query('search') searchParam?: string,
     @Query('status') statusParam?: string,
+    @Query('space') spaceParam?: string,
   ) {
     const page = Math.max(1, Number(pageParam) || 1);
     const limit = Math.min(50, Math.max(5, Number(limitParam) || 5));
@@ -121,6 +122,7 @@ export class TasksController {
       order,
       search: searchParam,
       status: statusParam && statusParam !== 'All' ? statusParam : undefined,
+      space: spaceParam?.trim() || undefined,
     });
     return { tasks, total, page, limit };
   }

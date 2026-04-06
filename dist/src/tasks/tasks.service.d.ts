@@ -40,12 +40,9 @@ export declare class TasksService {
     private readonly prisma;
     constructor(prisma: PrismaService);
     create(input: CreateTaskInput): Promise<{
-        id: number;
-        slug: string;
-        createdAt: Date;
-        updatedAt: Date;
-        space: string | null;
         key: string;
+        slug: string;
+        space: string | null;
         workType: string | null;
         status: string;
         summary: string;
@@ -59,17 +56,17 @@ export declare class TasksService {
         category: string | null;
         team: string | null;
         subtasks: Prisma.JsonValue | null;
+        createdAt: Date;
+        updatedAt: Date;
+        id: number;
         userId: number;
         createdBy: number;
         updatedBy: number;
     }>;
     updateByKey(key: string, input: UpdateTaskInput): Promise<{
-        id: number;
-        slug: string;
-        createdAt: Date;
-        updatedAt: Date;
-        space: string | null;
         key: string;
+        slug: string;
+        space: string | null;
         workType: string | null;
         status: string;
         summary: string;
@@ -83,18 +80,18 @@ export declare class TasksService {
         category: string | null;
         team: string | null;
         subtasks: Prisma.JsonValue | null;
+        createdAt: Date;
+        updatedAt: Date;
+        id: number;
         userId: number;
         createdBy: number;
         updatedBy: number;
     }>;
     deleteByKey(key: string): Promise<void>;
     findAll(): Promise<{
-        id: number;
-        slug: string;
-        createdAt: Date;
-        updatedAt: Date;
-        space: string | null;
         key: string;
+        slug: string;
+        space: string | null;
         workType: string | null;
         status: string;
         summary: string;
@@ -108,6 +105,9 @@ export declare class TasksService {
         category: string | null;
         team: string | null;
         subtasks: Prisma.JsonValue | null;
+        createdAt: Date;
+        updatedAt: Date;
+        id: number;
         userId: number;
         createdBy: number;
         updatedBy: number;
@@ -119,14 +119,12 @@ export declare class TasksService {
         order: 'asc' | 'desc';
         search?: string;
         status?: string;
+        space?: string;
     }): Promise<{
         tasks: {
-            id: number;
-            slug: string;
-            createdAt: Date;
-            updatedAt: Date;
-            space: string | null;
             key: string;
+            slug: string;
+            space: string | null;
             workType: string | null;
             status: string;
             summary: string;
@@ -140,6 +138,9 @@ export declare class TasksService {
             category: string | null;
             team: string | null;
             subtasks: Prisma.JsonValue | null;
+            createdAt: Date;
+            updatedAt: Date;
+            id: number;
             userId: number;
             createdBy: number;
             updatedBy: number;
@@ -147,12 +148,9 @@ export declare class TasksService {
         total: number;
     }>;
     findByKeyOrSlug(value: string): Promise<{
-        id: number;
-        slug: string;
-        createdAt: Date;
-        updatedAt: Date;
-        space: string | null;
         key: string;
+        slug: string;
+        space: string | null;
         workType: string | null;
         status: string;
         summary: string;
@@ -166,6 +164,9 @@ export declare class TasksService {
         category: string | null;
         team: string | null;
         subtasks: Prisma.JsonValue | null;
+        createdAt: Date;
+        updatedAt: Date;
+        id: number;
         userId: number;
         createdBy: number;
         updatedBy: number;

@@ -212,6 +212,9 @@ let TasksService = class TasksService {
         if (params.status) {
             where.status = params.status;
         }
+        if (params.space) {
+            where.space = { contains: params.space };
+        }
         const skip = (params.page - 1) * params.limit;
         const [tasks, total] = await Promise.all([
             this.prisma.task.findMany({
