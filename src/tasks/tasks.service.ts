@@ -262,6 +262,7 @@ export class TasksService {
     search?: string;
     status?: string;
     space?: string;
+    userId?: number;
   }) {
     const search = params.search?.trim();
     const where: Record<string, unknown> = {};
@@ -279,6 +280,26 @@ export class TasksService {
     }
     if (params.space) {
       where.space = { contains: params.space };
+    }
+    if (params.userId) {
+      const spaces = await this.prisma.space.findMany({
+        where: {
+          OR: [
+            { userId: params.userId },
+            { members: { some: { userId: params.userId } } },
+          ],
+        },
+        select: { key: true },
+      });
+      const spaceKeys = spaces.map((space) => space.key);
+      if (!spaceKeys.length) {
+        return { tasks: [], total: 0 };
+      }
+      const accessOr = spaceKeys.map((key) => ({ space: { contains: key } }));
+      const existingAnd = Array.isArray(where.AND)
+        ? (where.AND as Record<string, unknown>[])
+        : [];
+      where.AND = [...existingAnd, { OR: accessOr }];
     }
     const skip = (params.page - 1) * params.limit;
     const [tasks, total] = await Promise.all([

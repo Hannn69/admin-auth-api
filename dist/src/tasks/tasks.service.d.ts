@@ -120,6 +120,7 @@ export declare class TasksService {
         search?: string;
         status?: string;
         space?: string;
+        userId?: number;
     }): Promise<{
         tasks: {
             id: number;

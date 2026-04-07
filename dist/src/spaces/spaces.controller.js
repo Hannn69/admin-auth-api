@@ -81,7 +81,7 @@ let SpacesController = class SpacesController {
         }
         return { message: 'space has been deleted succesfully' };
     }
-    async list(pageParam, limitParam, sortParam, orderParam, searchParam, appParam, managedParam) {
+    async list(req, pageParam, limitParam, sortParam, orderParam, searchParam, appParam, managedParam) {
         const page = Math.max(1, Number(pageParam) || 1);
         const limit = Math.min(50, Math.max(5, Number(limitParam) || 5));
         const sort = sortParam === 'name' || sortParam === 'key'
@@ -90,6 +90,10 @@ let SpacesController = class SpacesController {
                 ? 'createdAt'
                 : 'updatedAt';
         const order = orderParam === 'asc' ? 'asc' : 'desc';
+        const user = req.user;
+        if (!user?.id) {
+            return { spaces: [], total: 0, page, limit };
+        }
         const { spaces, total } = await this.spacesService.findPaged({
             page,
             limit,
@@ -98,12 +102,113 @@ let SpacesController = class SpacesController {
             search: searchParam,
             app: appParam && appParam !== 'All apps' ? appParam : undefined,
             managed: managedParam && managedParam !== 'All' ? managedParam : undefined,
+            userId: user.id,
         });
         return { spaces, total, page, limit };
     }
-    async detail(idParam) {
+    async detail(idParam, req) {
+        const user = req.user;
+        if (!user?.id) {
+            return { space: null, isOwner: false };
+        }
+        const space = await this.spacesService.findByIdOrSlugForUser(idParam, user.id);
+        return { space, isOwner: space?.userId === user.id };
+    }
+    async invite(idParam, email, role, req) {
+        const user = req.user;
+        if (!user?.id) {
+            return { message: 'Unauthorized' };
+        }
         const space = await this.spacesService.findByIdOrSlug(idParam);
-        return { space };
+        if (!space || space.userId !== user.id) {
+            return { message: 'Forbidden' };
+        }
+        const invite = await this.spacesService.createInvite({
+            spaceId: space.id,
+            email,
+            role,
+            createdBy: user.id,
+        });
+        return { invite };
+    }
+    async acceptInvite(token, req) {
+        const user = req.user;
+        if (!user?.id) {
+            return { message: 'Unauthorized' };
+        }
+        const invite = await this.spacesService.acceptInvite(token, user.id);
+        return { invite };
+    }
+    async declineInvite(token, req) {
+        const user = req.user;
+        if (!user?.email) {
+            return { message: 'Unauthorized' };
+        }
+        const invite = await this.spacesService.declineInvite(token, user.email);
+        return { invite };
+    }
+    async cancelInvite(inviteId, req) {
+        const user = req.user;
+        if (!user?.id) {
+            return { message: 'Unauthorized' };
+        }
+        const invite = await this.spacesService.cancelInvite(inviteId, user.id);
+        return { invite };
+    }
+    async listInvites(req) {
+        const user = req.user;
+        if (!user?.email) {
+            return { invites: [] };
+        }
+        const invites = await this.spacesService.listInvitesForEmail(user.email);
+        return { invites };
+    }
+    async access(idParam, req) {
+        const user = req.user;
+        if (!user?.id) {
+            return { message: 'Unauthorized' };
+        }
+        const space = await this.spacesService.findByIdOrSlugForUser(idParam, user.id);
+        if (!space) {
+            return { message: 'Forbidden' };
+        }
+        const access = await this.spacesService.getAccessForUser(space.id, user.id);
+        return access;
+    }
+    async updateMemberRole(spaceIdParam, memberIdParam, role, req) {
+        const user = req.user;
+        if (!user?.id) {
+            return { message: 'Unauthorized' };
+        }
+        const space = await this.spacesService.findByIdOrSlug(spaceIdParam);
+        if (!space) {
+            return { message: 'Space not found' };
+        }
+        const memberId = Number(memberIdParam);
+        const updated = await this.spacesService.updateMemberRole({
+            spaceId: space.id,
+            memberId,
+            role,
+            userId: user.id,
+        });
+        return { member: updated };
+    }
+    async removeMember(spaceIdParam, memberIdParam, req) {
+        const user = req.user;
+        if (!user?.id) {
+            return { message: 'Unauthorized' };
+        }
+        const space = await this.spacesService.findByIdOrSlug(spaceIdParam);
+        if (!space) {
+            return { message: 'Space not found' };
+        }
+        const memberId = Number(memberIdParam);
+        await this.spacesService.removeMember({
+            spaceId: space.id,
+            memberId,
+            userId: user.id,
+        });
+        return { removed: true };
     }
 };
 exports.SpacesController = SpacesController;
@@ -140,25 +245,109 @@ __decorate([
 __decorate([
     (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
     (0, common_1.Get)('spaces'),
-    __param(0, (0, common_1.Query)('page')),
-    __param(1, (0, common_1.Query)('limit')),
-    __param(2, (0, common_1.Query)('sort')),
-    __param(3, (0, common_1.Query)('order')),
-    __param(4, (0, common_1.Query)('search')),
-    __param(5, (0, common_1.Query)('app')),
-    __param(6, (0, common_1.Query)('managed')),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Query)('page')),
+    __param(2, (0, common_1.Query)('limit')),
+    __param(3, (0, common_1.Query)('sort')),
+    __param(4, (0, common_1.Query)('order')),
+    __param(5, (0, common_1.Query)('search')),
+    __param(6, (0, common_1.Query)('app')),
+    __param(7, (0, common_1.Query)('managed')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String, String, String, String, String]),
+    __metadata("design:paramtypes", [Object, String, String, String, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], SpacesController.prototype, "list", null);
 __decorate([
     (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
     (0, common_1.Get)('space/detail/:id'),
     __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], SpacesController.prototype, "detail", null);
+__decorate([
+    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
+    (0, common_1.Post)('space/:id/invite'),
+    (0, common_1.HttpCode)(201),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)('email')),
+    __param(2, (0, common_1.Body)('role')),
+    __param(3, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, String, Object]),
+    __metadata("design:returntype", Promise)
+], SpacesController.prototype, "invite", null);
+__decorate([
+    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
+    (0, common_1.Post)('space/invite/accept'),
+    (0, common_1.HttpCode)(200),
+    __param(0, (0, common_1.Body)('token')),
+    __param(1, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], SpacesController.prototype, "acceptInvite", null);
+__decorate([
+    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
+    (0, common_1.Post)('space/invite/decline'),
+    (0, common_1.HttpCode)(200),
+    __param(0, (0, common_1.Body)('token')),
+    __param(1, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], SpacesController.prototype, "declineInvite", null);
+__decorate([
+    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
+    (0, common_1.Post)('space/invite/cancel'),
+    (0, common_1.HttpCode)(200),
+    __param(0, (0, common_1.Body)('inviteId')),
+    __param(1, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Object]),
+    __metadata("design:returntype", Promise)
+], SpacesController.prototype, "cancelInvite", null);
+__decorate([
+    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
+    (0, common_1.Get)('space/invites'),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], SpacesController.prototype, "listInvites", null);
+__decorate([
+    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
+    (0, common_1.Get)('space/:id/access'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], SpacesController.prototype, "access", null);
+__decorate([
+    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
+    (0, common_1.Post)('space/member/role'),
+    (0, common_1.HttpCode)(200),
+    __param(0, (0, common_1.Body)('spaceId')),
+    __param(1, (0, common_1.Body)('memberId')),
+    __param(2, (0, common_1.Body)('role')),
+    __param(3, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Number, String, Object]),
+    __metadata("design:returntype", Promise)
+], SpacesController.prototype, "updateMemberRole", null);
+__decorate([
+    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt')),
+    (0, common_1.Post)('space/member/remove'),
+    (0, common_1.HttpCode)(200),
+    __param(0, (0, common_1.Body)('spaceId')),
+    __param(1, (0, common_1.Body)('memberId')),
+    __param(2, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Number, Object]),
+    __metadata("design:returntype", Promise)
+], SpacesController.prototype, "removeMember", null);
 exports.SpacesController = SpacesController = __decorate([
     (0, common_1.Controller)(),
     __metadata("design:paramtypes", [spaces_service_1.SpacesService])

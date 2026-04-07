@@ -25,9 +25,11 @@ model User {
   tasks         Task[]  @relation("TaskOwner")
   createdTasks  Task[]  @relation("TaskCreator")
   updatedTasks  Task[]  @relation("TaskUpdater")
-  spaces        Space[] @relation("SpaceOwner")
-  createdSpaces Space[] @relation("SpaceCreator")
-  updatedSpaces Space[] @relation("SpaceUpdater")
+  spaces        Space[]        @relation("SpaceOwner")
+  createdSpaces Space[]        @relation("SpaceCreator")
+  updatedSpaces Space[]        @relation("SpaceUpdater")
+  spaceMembers  SpaceMember[]
+  notifications Notification[]
 }
 
 model Task {
@@ -78,7 +80,54 @@ model Space {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  user    User @relation("SpaceOwner", fields: [userId], references: [id])
-  creator User @relation("SpaceCreator", fields: [createdBy], references: [id])
-  updater User @relation("SpaceUpdater", fields: [updatedBy], references: [id])
+  user     User          @relation("SpaceOwner", fields: [userId], references: [id])
+  creator  User          @relation("SpaceCreator", fields: [createdBy], references: [id])
+  updater  User          @relation("SpaceUpdater", fields: [updatedBy], references: [id])
+  members  SpaceMember[]
+  invites  SpaceInvite[]
+}
+
+model SpaceMember {
+  id        Int      @id @default(autoincrement())
+  spaceId   Int
+  userId    Int
+  role      String   @default("member")
+  createdAt DateTime @default(now())
+
+  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([spaceId, userId])
+}
+
+model SpaceInvite {
+  id          Int      @id @default(autoincrement())
+  spaceId     Int
+  email       String
+  token       String   @unique
+  status      String   @default("pending")
+  role        String   @default("member")
+  createdBy   Int
+  acceptedBy  Int?
+  createdAt   DateTime @default(now())
+  acceptedAt  DateTime?
+  expiresAt   DateTime?
+
+  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@unique([spaceId, email])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  type      String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
 }

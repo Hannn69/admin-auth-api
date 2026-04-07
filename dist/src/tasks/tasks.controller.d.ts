@@ -12,7 +12,7 @@ export declare class TasksController {
     remove(key: string): Promise<{
         message: string;
     }>;
-    list(pageParam?: string, limitParam?: string, sortParam?: string, orderParam?: string, searchParam?: string, statusParam?: string, spaceParam?: string): Promise<{
+    list(pageParam?: string, limitParam?: string, sortParam?: string, orderParam?: string, searchParam?: string, statusParam?: string, spaceParam?: string, req?: Request): Promise<{
         tasks: {
             id: number;
             slug: string;

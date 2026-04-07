@@ -104,7 +104,9 @@ export class TasksController {
     @Query('search') searchParam?: string,
     @Query('status') statusParam?: string,
     @Query('space') spaceParam?: string,
+    @Req() req?: Request,
   ) {
+    const user = req?.user as { id: number } | undefined;
     const page = Math.max(1, Number(pageParam) || 1);
     const limit = Math.min(50, Math.max(5, Number(limitParam) || 5));
     const sort =
@@ -123,6 +125,7 @@ export class TasksController {
       search: searchParam,
       status: statusParam && statusParam !== 'All' ? statusParam : undefined,
       space: spaceParam?.trim() || undefined,
+      userId: user?.id,
     });
     return { tasks, total, page, limit };
   }

@@ -98,6 +98,7 @@ export class SpacesController {
   @UseGuards(AuthGuard('jwt'))
   @Get('spaces')
   async list(
+    @Req() req: Request,
     @Query('page') pageParam?: string,
     @Query('limit') limitParam?: string,
     @Query('sort') sortParam?: string,
@@ -116,6 +117,10 @@ export class SpacesController {
           : 'updatedAt';
     const order = orderParam === 'asc' ? 'asc' : 'desc';
 
+    const user = req.user as { id: number } | undefined;
+    if (!user?.id) {
+      return { spaces: [], total: 0, page, limit };
+    }
     const { spaces, total } = await this.spacesService.findPaged({
       page,
       limit,
@@ -125,14 +130,165 @@ export class SpacesController {
       app: appParam && appParam !== 'All apps' ? appParam : undefined,
       managed:
         managedParam && managedParam !== 'All' ? managedParam : undefined,
+      userId: user.id,
     });
     return { spaces, total, page, limit };
   }
 
   @UseGuards(AuthGuard('jwt'))
   @Get('space/detail/:id')
-  async detail(@Param('id') idParam: string) {
+  async detail(@Param('id') idParam: string, @Req() req: Request) {
+    const user = req.user as { id: number } | undefined;
+    if (!user?.id) {
+      return { space: null, isOwner: false };
+    }
+    const space = await this.spacesService.findByIdOrSlugForUser(
+      idParam,
+      user.id,
+    );
+    return { space, isOwner: space?.userId === user.id };
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('space/:id/invite')
+  @HttpCode(201)
+  async invite(
+    @Param('id') idParam: string,
+    @Body('email') email: string,
+    @Body('role') role: string,
+    @Req() req: Request,
+  ) {
+    const user = req.user as { id: number } | undefined;
+    if (!user?.id) {
+      return { message: 'Unauthorized' };
+    }
     const space = await this.spacesService.findByIdOrSlug(idParam);
-    return { space };
+    if (!space || space.userId !== user.id) {
+      return { message: 'Forbidden' };
+    }
+    const invite = await this.spacesService.createInvite({
+      spaceId: space.id,
+      email,
+      role,
+      createdBy: user.id,
+    });
+    return { invite };
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('space/invite/accept')
+  @HttpCode(200)
+  async acceptInvite(@Body('token') token: string, @Req() req: Request) {
+    const user = req.user as { id: number; email?: string } | undefined;
+    if (!user?.id) {
+      return { message: 'Unauthorized' };
+    }
+    const invite = await this.spacesService.acceptInvite(token, user.id);
+    return { invite };
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('space/invite/decline')
+  @HttpCode(200)
+  async declineInvite(@Body('token') token: string, @Req() req: Request) {
+    const user = req.user as { id: number; email?: string } | undefined;
+    if (!user?.email) {
+      return { message: 'Unauthorized' };
+    }
+    const invite = await this.spacesService.declineInvite(token, user.email);
+    return { invite };
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('space/invite/cancel')
+  @HttpCode(200)
+  async cancelInvite(@Body('inviteId') inviteId: number, @Req() req: Request) {
+    const user = req.user as { id: number } | undefined;
+    if (!user?.id) {
+      return { message: 'Unauthorized' };
+    }
+    const invite = await this.spacesService.cancelInvite(inviteId, user.id);
+    return { invite };
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('space/invites')
+  async listInvites(@Req() req: Request) {
+    const user = req.user as { email?: string } | undefined;
+    if (!user?.email) {
+      return { invites: [] };
+    }
+    const invites = await this.spacesService.listInvitesForEmail(user.email);
+    return { invites };
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get('space/:id/access')
+  async access(@Param('id') idParam: string, @Req() req: Request) {
+    const user = req.user as { id: number } | undefined;
+    if (!user?.id) {
+      return { message: 'Unauthorized' };
+    }
+    const space = await this.spacesService.findByIdOrSlugForUser(
+      idParam,
+      user.id,
+    );
+    if (!space) {
+      return { message: 'Forbidden' };
+    }
+    const access = await this.spacesService.getAccessForUser(space.id, user.id);
+    return access;
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('space/member/role')
+  @HttpCode(200)
+  async updateMemberRole(
+    @Body('spaceId') spaceIdParam: string,
+    @Body('memberId') memberIdParam: number,
+    @Body('role') role: string,
+    @Req() req: Request,
+  ) {
+    const user = req.user as { id: number } | undefined;
+    if (!user?.id) {
+      return { message: 'Unauthorized' };
+    }
+    const space = await this.spacesService.findByIdOrSlug(spaceIdParam);
+    if (!space) {
+      return { message: 'Space not found' };
+    }
+    const memberId = Number(memberIdParam);
+    const updated = await this.spacesService.updateMemberRole({
+      spaceId: space.id,
+      memberId,
+      role,
+      userId: user.id,
+    });
+    return { member: updated };
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Post('space/member/remove')
+  @HttpCode(200)
+  async removeMember(
+    @Body('spaceId') spaceIdParam: string,
+    @Body('memberId') memberIdParam: number,
+    @Req() req: Request,
+  ) {
+    const user = req.user as { id: number } | undefined;
+    if (!user?.id) {
+      return { message: 'Unauthorized' };
+    }
+    const space = await this.spacesService.findByIdOrSlug(spaceIdParam);
+    if (!space) {
+      return { message: 'Space not found' };
+    }
+    const memberId = Number(memberIdParam);
+    await this.spacesService.removeMember({
+      spaceId: space.id,
+      memberId,
+      userId: user.id,
+    });
+    return { removed: true };
   }
 }
